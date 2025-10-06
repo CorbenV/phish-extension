@@ -9,7 +9,6 @@
 	"content_scripts": [
 		{
 			"js": ["scripts/content.js"],
-			"css": ["content.css"],
 			"matches": ["https://outlook.office.com/mail/*"]
 		}
 	]

@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import "./content.css";
 import Summary from "./components/Summary";
 const READING_PANE_ID = "ReadingPaneContainerId";
+import styles from "./content.css?inline";
 
 let observer: MutationObserver | null = null;
 let last = "";
@@ -10,9 +11,18 @@ let summary: HTMLElement | null = null;
 function injectSummary(parent: HTMLElement) {
 	if (summary) summary.remove();
 
+	const host = document.createElement("div");
+	summary = host;
+	parent.appendChild(host);
+
+	const shadow = host.attachShadow({ mode: "open" });
+
+	const styleTag = document.createElement("style");
+	styleTag.textContent = styles;
+	shadow.appendChild(styleTag);
+
 	const container = document.createElement("div");
-	summary = container;
-	parent.appendChild(container);
+	shadow.appendChild(container);
 
 	const root = ReactDOM.createRoot(container);
 	root.render(<Summary />);
