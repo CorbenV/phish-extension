@@ -1,0 +1,16 @@
+{
+	"name": "Phish Extension",
+	"description": "Test For CODERS",
+	"version": "1.0",
+	"manifest_version": 3,
+	"action": {
+		"default_popup": "src/popup/popup.html"
+	},
+	"content_scripts": [
+		{
+			"js": ["scripts/content.js"],
+			"css": ["content.css"],
+			"matches": ["https://outlook.office.com/mail/*"]
+		}
+	]
+}
