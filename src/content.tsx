@@ -2,30 +2,35 @@ import ReactDOM from "react-dom/client";
 import "./content.css";
 import Summary from "./components/Summary";
 const READING_PANE_ID = "ReadingPaneContainerId";
+const READING_PANE_INNER_ID = "ConversationReadingPaneContainer";
 import styles from "./content.css?inline";
 
 let observer: MutationObserver | null = null;
 let last = "";
 let summary: HTMLElement | null = null;
 
-function injectSummary(parent: HTMLElement) {
+function injectSummary() {
+	const readingPaneInner = document.getElementById(READING_PANE_INNER_ID);
+	if (!readingPaneInner) return;
 	if (summary) summary.remove();
 
-	const host = document.createElement("div");
-	summary = host;
-	parent.appendChild(host);
+	queueMicrotask(() => {
+		const host = document.createElement("div");
+		summary = host;
+		readingPaneInner.insertBefore(host, readingPaneInner.children[1]);
 
-	const shadow = host.attachShadow({ mode: "open" });
+		const shadow = host.attachShadow({ mode: "open" });
 
-	const styleTag = document.createElement("style");
-	styleTag.textContent = styles;
-	shadow.appendChild(styleTag);
+		const styleTag = document.createElement("style");
+		styleTag.textContent = styles;
+		shadow.appendChild(styleTag);
 
-	const container = document.createElement("div");
-	shadow.appendChild(container);
+		const container = document.createElement("div");
+		shadow.appendChild(container);
 
-	const root = ReactDOM.createRoot(container);
-	root.render(<Summary />);
+		const root = ReactDOM.createRoot(container);
+		root.render(<Summary verdict="Safe" message="All good here!" />);
+	});
 }
 
 function scrapeEmail() {
@@ -38,7 +43,7 @@ function scrapeEmail() {
 	if (last == preview) return;
 	last = preview;
 
-	injectSummary(container);
+	injectSummary();
 
 	chrome.runtime.sendMessage({
 		type: "EMAIL_OPENED",
