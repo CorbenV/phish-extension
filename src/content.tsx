@@ -5,10 +5,6 @@ const READING_PANE_ID = "ReadingPaneContainerId";
 const READING_PANE_INNER_ID = "ConversationReadingPaneContainer";
 import styles from "./content.css?inline";
 
-let observer: MutationObserver | null = null;
-let last = "";
-let summary: HTMLElement | null = null;
-
 function injectSummary() {
 	const readingPaneInner = document.getElementById(READING_PANE_INNER_ID);
 	if (!readingPaneInner) return;
@@ -33,21 +29,85 @@ function injectSummary() {
 	});
 }
 
-function scrapeEmail() {
+function extractLinksFromHTML(html: string): string[] {
+	const links = new Set<string>();
+
+	const doc = new DOMParser().parseFromString(html, "text/html");
+	doc.querySelectorAll("a[href]").forEach((a) => {
+		const href = a.getAttribute("href");
+		if (href && /^https?:\/\//i.test(href)) links.add(href);
+	});
+
+	const text = doc.body.textContent || "";
+
+	const regex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
+	const matches = text.match(regex);
+	if (matches)
+		matches.forEach((url) => {
+			if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+			links.add(url);
+		});
+
+	return Array.from(links);
+}
+
+let last: string | null = "";
+let summary: HTMLElement | null = null;
+let observer: MutationObserver | null = null;
+
+async function scrapeEmail() {
 	const container = document.getElementById(READING_PANE_ID);
 	if (!container) return;
 
-	const bodyText = container.innerText;
-	const preview = bodyText.slice(0, 100);
+	const subjectEl = document.querySelector(
+		"#ReadingPaneContainerId [role='heading']"
+	);
+	const subject = subjectEl ? subjectEl.textContent.trim() : null;
 
-	if (last == preview) return;
-	last = preview;
+	if (last === subject) return;
+	last = subject;
 
-	injectSummary();
+	await waitForEmailBody(container);
+
+	const bodyText = container.innerHTML;
+
+	let links: string[] = [];
+	try {
+		links = extractLinksFromHTML(bodyText);
+		console.log("Extracted links:", links);
+	} catch (err) {
+		console.error("Link extraction failed:", err);
+	}
 
 	chrome.runtime.sendMessage({
 		type: "EMAIL_OPENED",
-		payload: { body: bodyText },
+		payload: { body: links },
+	});
+
+	if (!summary || !document.body.contains(summary)) {
+		injectSummary();
+	}
+}
+
+function waitForEmailBody(container: HTMLElement): Promise<void> {
+	return new Promise((resolve) => {
+		let checks = 0;
+
+		const interval = setInterval(() => {
+			if (
+				container.querySelector("a") ||
+				container.innerText.length > 100
+			) {
+				clearInterval(interval);
+				resolve();
+			}
+
+			checks++;
+			if (checks > 50) {
+				clearInterval(interval);
+				resolve();
+			}
+		}, 100);
 	});
 }
 
