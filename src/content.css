@@ -3,8 +3,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* .summaryOverride {
-} */
+.summaryOverride {
+}
+
+.summarySafe {
+	border: 2px green solid !important;
+}
+
+.summaryWarning {
+	border: 2px orange solid !important;
+}
+
+.summaryUnsafe {
+	border: 2px red solid !important;
+}
 
 .shadowOverride {
 	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;

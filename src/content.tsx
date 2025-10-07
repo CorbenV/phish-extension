@@ -1,11 +1,12 @@
 import ReactDOM from "react-dom/client";
 import "./content.css";
 import Summary from "./components/Summary";
+import type { PhishResponse } from "./types";
 const READING_PANE_ID = "ReadingPaneContainerId";
 const READING_PANE_INNER_ID = "ConversationReadingPaneContainer";
 import styles from "./content.css?inline";
 
-function injectSummary() {
+function injectSummary(resp: PhishResponse) {
 	const readingPaneInner = document.getElementById(READING_PANE_INNER_ID);
 	if (!readingPaneInner) return;
 	if (summary) summary.remove();
@@ -25,7 +26,7 @@ function injectSummary() {
 		shadow.appendChild(container);
 
 		const root = ReactDOM.createRoot(container);
-		root.render(<Summary verdict="Safe" message="All good here!" />);
+		root.render(<Summary verdict={resp.verdict} message={resp.message} />);
 	});
 }
 
@@ -79,13 +80,23 @@ async function scrapeEmail() {
 		console.error("Link extraction failed:", err);
 	}
 
-	chrome.runtime.sendMessage({
-		type: "EMAIL_OPENED",
-		payload: { body: links },
-	});
-
-	if (!summary || !document.body.contains(summary)) {
-		injectSummary();
+	try {
+		if (summary) summary.remove();
+		const response = await chrome.runtime.sendMessage({
+			type: "EMAIL_OPENED",
+			payload: {
+				body: {
+					links,
+				},
+			},
+		});
+		injectSummary(response);
+	} catch (error) {
+		console.error("Error communicating with background:", error);
+		injectSummary({
+			verdict: "WARNING",
+			message: "Could not analyze email",
+		});
 	}
 }
 
